@@ -134,6 +134,126 @@ func TestAccAuditManagerControl_tags(t *testing.T) {
 	})
 }
 
+func TestAccAuditManagerControl_optional(t *testing.T) {
+	var control types.Control
+	rName := sdkacctest.RandomWithPrefix(acctest.ResourcePrefix)
+	resourceName := "aws_auditmanager_control.test"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			acctest.PreCheck(t)
+			acctest.PreCheckPartitionHasService(names.AuditManagerEndpointID, t)
+			testAccPreCheckControl(t)
+		},
+		ErrorCheck:               acctest.ErrorCheck(t, names.AuditManagerEndpointID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckControlDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccControlConfig_optional(rName, "text1", "text1", "text1", "text1"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckControlExists(resourceName, &control),
+					resource.TestCheckResourceAttr(resourceName, "name", rName),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_name", rName),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_set_up_option", string(types.SourceSetUpOptionProceduralControlsMapping)),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_type", string(types.SourceTypeManual)),
+					resource.TestCheckResourceAttr(resourceName, "action_plan_instructions", "text1"),
+					resource.TestCheckResourceAttr(resourceName, "action_plan_title", "text1"),
+					resource.TestCheckResourceAttr(resourceName, "description", "text1"),
+					resource.TestCheckResourceAttr(resourceName, "testing_information", "text1"),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccControlConfig_optional(rName, "text2", "text2", "text2", "text2"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckControlExists(resourceName, &control),
+					resource.TestCheckResourceAttr(resourceName, "name", rName),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_name", rName),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_set_up_option", string(types.SourceSetUpOptionProceduralControlsMapping)),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_type", string(types.SourceTypeManual)),
+					resource.TestCheckResourceAttr(resourceName, "action_plan_instructions", "text2"),
+					resource.TestCheckResourceAttr(resourceName, "action_plan_title", "text2"),
+					resource.TestCheckResourceAttr(resourceName, "description", "text2"),
+					resource.TestCheckResourceAttr(resourceName, "testing_information", "text2"),
+				),
+			},
+		},
+	})
+}
+
+func TestAccAuditManagerControl_optionalSources(t *testing.T) {
+	var control types.Control
+	rName := sdkacctest.RandomWithPrefix(acctest.ResourcePrefix)
+	resourceName := "aws_auditmanager_control.test"
+
+	// Ref: https://docs.aws.amazon.com/audit-manager/latest/userguide/control-data-sources-api.html
+	keywordValue1 := "iam_ListRoles"
+	keywordValue2 := "iam_ListPolicies"
+
+	resource.ParallelTest(t, resource.TestCase{
+		PreCheck: func() {
+			acctest.PreCheck(t)
+			acctest.PreCheckPartitionHasService(names.AuditManagerEndpointID, t)
+			testAccPreCheckControl(t)
+		},
+		ErrorCheck:               acctest.ErrorCheck(t, names.AuditManagerEndpointID),
+		ProtoV5ProviderFactories: acctest.ProtoV5ProviderFactories,
+		CheckDestroy:             testAccCheckControlDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccControlConfig_optionalSources(rName, "text1", string(types.SourceFrequencyDaily),
+					string(types.SourceSetUpOptionSystemControlsMapping), string(types.SourceTypeAwsApiCall), "text1",
+					string(types.KeywordInputTypeSelectFromList), keywordValue1),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckControlExists(resourceName, &control),
+					resource.TestCheckResourceAttr(resourceName, "name", rName),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_name", rName),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_description", "text1"),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_frequency", string(types.SourceFrequencyDaily)),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_set_up_option", string(types.SourceSetUpOptionSystemControlsMapping)),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_type", string(types.SourceTypeAwsApiCall)),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.troubleshooting_text", "text1"),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_keyword.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_keyword.0.keyword_input_type", string(types.KeywordInputTypeSelectFromList)),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_keyword.0.keyword_value", keywordValue1),
+				),
+			},
+			{
+				ResourceName:      resourceName,
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				Config: testAccControlConfig_optionalSources(rName, "text2", string(types.SourceFrequencyWeekly),
+					string(types.SourceSetUpOptionSystemControlsMapping), string(types.SourceTypeAwsApiCall), "text2",
+					string(types.KeywordInputTypeSelectFromList), keywordValue2),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckControlExists(resourceName, &control),
+					resource.TestCheckResourceAttr(resourceName, "name", rName),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_name", rName),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_description", "text2"),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_frequency", string(types.SourceFrequencyWeekly)),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_set_up_option", string(types.SourceSetUpOptionSystemControlsMapping)),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_type", string(types.SourceTypeAwsApiCall)),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.troubleshooting_text", "text2"),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_keyword.#", "1"),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_keyword.0.keyword_input_type", string(types.KeywordInputTypeSelectFromList)),
+					resource.TestCheckResourceAttr(resourceName, "control_mapping_sources.0.source_keyword.0.keyword_value", keywordValue2),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckControlDestroy(s *terraform.State) error {
 	ctx := context.Background()
 	conn := acctest.Provider.Meta().(*conns.AWSClient).AuditManagerClient
@@ -246,4 +366,45 @@ resource "aws_auditmanager_control" "test" {
   }
 }
 `, rName, tagKey1, tagValue1, tagKey2, tagValue2)
+}
+
+func testAccControlConfig_optional(rName, actionPlanInstructions, actionPlanTitle, description, testingInformation string) string {
+	return fmt.Sprintf(`
+resource "aws_auditmanager_control" "test" {
+  name = %[1]q
+
+  action_plan_instructions = %[2]q
+  action_plan_title        = %[3]q
+  description              = %[4]q
+  testing_information      = %[5]q
+
+  control_mapping_sources {
+    source_name          = %[1]q
+    source_set_up_option = "Procedural_Controls_Mapping"
+    source_type          = "MANUAL"
+  }
+}
+`, rName, actionPlanInstructions, actionPlanTitle, description, testingInformation)
+}
+
+func testAccControlConfig_optionalSources(rName, sourceDescription, sourceFrequency, sourceSetUpOption, sourceType, troubleshootingText, keywordInputType, keywordValue string) string {
+	return fmt.Sprintf(`
+resource "aws_auditmanager_control" "test" {
+  name = %[1]q
+
+  control_mapping_sources {
+    source_name          = %[1]q
+    source_description   = %[2]q
+    source_frequency     = %[3]q
+    source_set_up_option = %[4]q
+    source_type          = %[5]q
+    troubleshooting_text = %[6]q
+
+	source_keyword {
+      keyword_input_type = %[7]q
+      keyword_value      = %[8]q
+	}
+  }
+}
+`, rName, sourceDescription, sourceFrequency, sourceSetUpOption, sourceType, troubleshootingText, keywordInputType, keywordValue)
 }
