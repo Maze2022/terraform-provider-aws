@@ -52,18 +52,22 @@ func ResourceControl() *schema.Resource {
 				Computed: true,
 			},
 			"control_mapping_sources": {
-				Type:     schema.TypeList,
+				Type:     schema.TypeSet,
 				Required: true,
 				MinItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
+						// Note: ForceNew is applied to all Elem attributes because the set type will
+						// not preserve the computed source_id required for Update API requests.
 						"source_description": {
 							Type:     schema.TypeString,
 							Optional: true,
+							ForceNew: true,
 						},
 						"source_frequency": {
 							Type:             schema.TypeString,
 							Optional:         true,
+							ForceNew:         true,
 							ValidateDiagFunc: enum.Validate[types.SourceFrequency](),
 						},
 						"source_id": {
@@ -73,6 +77,7 @@ func ResourceControl() *schema.Resource {
 						"source_keyword": {
 							Type:     schema.TypeList,
 							Optional: true,
+							ForceNew: true,
 							MaxItems: 1,
 							Elem: &schema.Resource{
 								Schema: map[string]*schema.Schema{
@@ -91,20 +96,24 @@ func ResourceControl() *schema.Resource {
 						"source_name": {
 							Type:     schema.TypeString,
 							Required: true,
+							ForceNew: true,
 						},
 						"source_set_up_option": {
 							Type:             schema.TypeString,
 							Required:         true,
+							ForceNew:         true,
 							ValidateDiagFunc: enum.Validate[types.SourceSetUpOption](),
 						},
 						"source_type": {
 							Type:             schema.TypeString,
 							Required:         true,
+							ForceNew:         true,
 							ValidateDiagFunc: enum.Validate[types.SourceType](),
 						},
 						"troubleshooting_text": {
 							Type:     schema.TypeString,
 							Optional: true,
+							ForceNew: true,
 						},
 					},
 				},
@@ -142,7 +151,7 @@ func resourceControlCreate(ctx context.Context, d *schema.ResourceData, meta int
 
 	in := &auditmanager.CreateControlInput{
 		Name:                  aws.String(d.Get("name").(string)),
-		ControlMappingSources: expandControlMappingSourcesCreate(d.Get("control_mapping_sources").([]interface{})),
+		ControlMappingSources: expandControlMappingSourcesCreate(d.Get("control_mapping_sources").(*schema.Set)),
 	}
 
 	if v, ok := d.GetOk("action_plan_instructions"); ok {
@@ -232,7 +241,7 @@ func resourceControlUpdate(ctx context.Context, d *schema.ResourceData, meta int
 		in := &auditmanager.UpdateControlInput{
 			ControlId:             aws.String(d.Id()),
 			Name:                  aws.String(d.Get("name").(string)),
-			ControlMappingSources: expandControlMappingSourcesUpdate(d.Get("control_mapping_sources").([]interface{})),
+			ControlMappingSources: expandControlMappingSourcesUpdate(d.Get("control_mapping_sources").(*schema.Set)),
 		}
 		if v, ok := d.GetOk("action_plan_instructions"); ok {
 			in.ActionPlanInstructions = aws.String((v.(string)))
@@ -345,7 +354,8 @@ func flattenControlMappingSourceSourceKeyword(apiObject *types.SourceKeyword) []
 	return []interface{}{m}
 }
 
-func expandControlMappingSourcesCreate(tfList []interface{}) []types.CreateControlMappingSource {
+func expandControlMappingSourcesCreate(tfSet *schema.Set) []types.CreateControlMappingSource {
+	tfList := tfSet.List()
 	var ccms []types.CreateControlMappingSource
 
 	for _, r := range tfList {
@@ -379,7 +389,8 @@ func expandControlMappingSourcesCreate(tfList []interface{}) []types.CreateContr
 	return ccms
 }
 
-func expandControlMappingSourcesUpdate(tfList []interface{}) []types.ControlMappingSource {
+func expandControlMappingSourcesUpdate(tfSet *schema.Set) []types.ControlMappingSource {
+	tfList := tfSet.List()
 	var cms []types.ControlMappingSource
 
 	for _, r := range tfList {
